@@ -4,9 +4,10 @@
 
 # CorDapp Raw Updates demo 
 
-A simple Cordapp to experiment with keeping an external query data database in sync using the rawUpdates
+A simple Cordapp to experiment with keeping an external query database in sync using the rawUpdates
 API 
 
 ## Pre-Requisites
 
 See https://docs.corda.net/getting-set-up.html.
+

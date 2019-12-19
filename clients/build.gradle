@@ -16,28 +16,32 @@ dependencies {
     compile project(":contracts")
     compile project(":workflows")
 
-    compile("org.springframework.boot:spring-boot-starter-websocket:$spring_boot_version") {
-        exclude group: "org.springframework.boot", module: "spring-boot-starter-logging"
-    }
+//    compile("org.springframework.boot:spring-boot-starter-websocket:$spring_boot_version") {
+//        exclude group: "org.springframework.boot", module: "spring-boot-starter-logging"
+//    }
 
     compile "org.apache.logging.log4j:log4j-slf4j-impl:${log4j_version}"
     compile "org.apache.logging.log4j:log4j-web:${log4j_version}"
     compile "org.slf4j:jul-to-slf4j:$slf4j_version"
+
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.9.8'
+    compile 'com.fasterxml.jackson.module:jackson-module-kotlin:2.9.8'
+    compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.8'
 }
 
 
 springBoot {
-    mainClassName = "com.template.webserver.ServerKt"
+    mainClassName = "com.example.DataGeneratorKt"
 }
 
-task runTemplateClient(type: JavaExec, dependsOn: assemble) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'com.template.ClientKt'
-    args 'localhost:10006', 'user1', 'test'
-}
-
-task runTemplateServer(type: JavaExec, dependsOn: assemble) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'com.template.webserver.ServerKt'
-    args '--server.port=10050', '--config.rpc.host=localhost', '--config.rpc.port=10006', '--config.rpc.username=user1', '--config.rpc.password=test'
-}
+//jar {
+//    from(configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }) {
+//        exclude "META-INF/*.SF"
+//        exclude "META-INF/*.DSA"
+//        exclude "META-INF/*.RSA"
+//    }
+//    archiveName = "corda-angel.jar"
+//    manifest {
+//        attributes 'Main-Class': "com.example.DataGeneratorKt"
+//    }
+//}

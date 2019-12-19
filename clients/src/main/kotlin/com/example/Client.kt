@@ -29,5 +29,21 @@ private class Client {
         // For example, here we print the nodes on the network.
         val nodes = proxy.networkMapSnapshot()
         logger.info("{}", nodes)
+
+
+//        proxy.stateMachinesSnapshot().forEach {
+//            println(it)
+//        }
+
+
+//        proxy.rawUpdates.subscribe {
+//            MessageRepository.log.info("something to subscribe to")
+//            it.produced.forEach {
+//                val data = it.state.data
+//                if (data is FooState){
+//                    MessageRepository.log.info(data.data)
+//                }
+//            }
+//        }
     }
 }
