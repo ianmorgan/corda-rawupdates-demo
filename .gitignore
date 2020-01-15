@@ -1,3 +1,8 @@
+# app data files
+generated-data.txt
+
+
+
 # Eclipse, ctags, Mac metadata, log files
 .classpath
 .project

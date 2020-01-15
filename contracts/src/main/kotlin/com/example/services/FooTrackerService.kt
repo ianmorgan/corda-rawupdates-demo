@@ -16,6 +16,7 @@ import kotlin.collections.HashSet
 class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerializeAsToken() {
     private val fooData = File("foo-data.txt")
     private val fooErrors = File("foo-errors.txt")
+    private val triggered = File("triggered.txt")
     private val seen = File("seen.txt")
     private val alreadySeen = HashSet<UUID>()
 
@@ -34,6 +35,9 @@ class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerial
 
     private fun trackFoos() {
         serviceHub.vaultService.rawUpdates.subscribe {
+            log.info("rawUpdate observer triggered for flow ${it.flowId}")
+            triggered.appendText("${it.flowId} triggered at ${System.currentTimeMillis()}\n")
+
             it.produced.forEach { produced ->
                 val data = produced.state.data
                 if (data is FooState) {
@@ -66,8 +70,7 @@ class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerial
                             }
                         }
                     }
-                    fooData.appendText("${it.flowId},${fooToCSV(data)}\n")
-                    log.info("Here is another Foo!: ${data.linearId}, with updateType of ${it.type} and flowid ${it.flowId}")
+                    fooData.appendText("${it.flowId},${fooToCSV(data)},${it.type}\n")
                 }
             }
         }
