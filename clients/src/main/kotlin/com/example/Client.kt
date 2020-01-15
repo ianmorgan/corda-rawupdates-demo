@@ -1,6 +1,7 @@
 package com.example
 
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
 import net.corda.core.utilities.NetworkHostAndPort.Companion.parse
 import net.corda.core.utilities.loggerFor
 
@@ -22,7 +23,8 @@ private class Client {
         val nodeAddress = parse(args[0])
         val rpcUsername = args[1]
         val rpcPassword = args[2]
-        val client = CordaRPCClient(nodeAddress)
+        val config = CordaRPCClientConfiguration(minimumServerProtocolVersion = 4)
+        val client = CordaRPCClient(nodeAddress, config)
         val proxy = client.start(rpcUsername, rpcPassword).proxy
 
         // Interact with the node.

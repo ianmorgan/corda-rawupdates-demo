@@ -2,8 +2,11 @@ package com.example.flows
 
 import co.paralleluniverse.fibers.Suspendable
 import com.example.contracts.FooContract
+import com.example.states.Action
 import com.example.states.FooState
+import net.corda.core.context.Actor
 import net.corda.core.contracts.Command
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -16,7 +19,10 @@ import net.corda.core.utilities.ProgressTracker
 // *********
 @InitiatingFlow
 @StartableByRPC
-class CreateFooFlow(val data: String, val otherParty: Party) : FlowLogic<SignedTransaction>() {
+class CreateFoo(val id : UniqueIdentifier,
+                    val data: String,
+                    val otherParty: Party,
+                    val action : String) : FlowLogic<SignedTransaction>() {
     /**
      * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
      * checkpoint is reached in the code. See the 'progressTracker.currentStep' expressions within the call() function.
@@ -51,7 +57,9 @@ class CreateFooFlow(val data: String, val otherParty: Party) : FlowLogic<SignedT
 
         // Stage 1. Generate an unsigned transaction.
         progressTracker.currentStep = GENERATING_TRANSACTION
-        val state = FooState(data = data,
+        val state = FooState(linearId = id,
+                data = data,
+                action = Action.valueOf(action),
                 partyA = me,
                 partyB = otherParty)
 
@@ -93,7 +101,7 @@ class CreateFooFlow(val data: String, val otherParty: Party) : FlowLogic<SignedT
     }
 }
 
-@InitiatedBy(CreateFooFlow::class)
+@InitiatedBy(CreateFoo::class)
 class CreateFooResponder(val counterpartySession: FlowSession) : FlowLogic<SignedTransaction>() {
     @Suspendable
     override fun call(): SignedTransaction {

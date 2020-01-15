@@ -1,14 +1,20 @@
 package com.example
 
-import com.example.flows.CreateFooFlow
+import com.example.flows.CreateFoo
+import com.example.flows.FindFoo
+import com.example.flows.FindFooAcrossNetwork
+import com.example.states.Action
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import net.corda.client.rpc.CordaRPCClient
+import net.corda.client.rpc.CordaRPCClientConfiguration
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.utilities.NetworkHostAndPort
 import net.corda.core.utilities.loggerFor
+import java.io.File
 import java.io.FileInputStream
 import java.util.*
 import java.util.concurrent.Executors
@@ -31,46 +37,94 @@ private class DataGenerator {
         mapper.registerModule(KotlinModule())
     }
 
-
     companion object {
         val logger = loggerFor<DataGenerator>()
     }
 
     fun main(args: Array<String>) {
         // Create an RPC connection to the node.
-        require(args.size == 1) { "Usage: DataGenerator <yaml-file-name>" }
+        require(args.size == 1) { "Usage: DataGenerator <yaml-file-name> | <uuid of FooState> " }
 
-        println("Reading config from ${args[0]}")
-        val yaml = FileInputStream(args[0]).bufferedReader().use { it.readText() }
+        val connection = loadConnection()
+
+        if (isUUID(args[0])) {
+            viewStatesInVault(connection, UUID.fromString(args[0]))
+        } else {
+            runDataGenerator(connection, args[0])
+        }
+
+        // need to force the exit - something unknown is holding onto resources
+        System.exit(0)
+    }
+
+    private fun loadConnection(): Connection {
+        println("Reading config from 'configs/connection.yaml'")
+        val yaml = FileInputStream("configs/connection.yaml").bufferedReader().use { it.readText() }
+        val connection = mapper
+                .readValue(yaml, Connection::class.java)
+
+        println("CordaRPC connection to ${connection.nodeAddress}")
+        return connection
+    }
+
+    private fun runDataGenerator(connection: Connection, yamlFile: String) {
+        val f = File("generated-data.txt")
+        println("Reading config from $yamlFile")
+        val yaml = FileInputStream(yamlFile).bufferedReader().use { it.readText() }
         val config = mapper
                 .readValue(yaml, Config::class.java)
 
-        println("CordaRPC connection to ${config.nodeAddress}")
+        val cordaConfig = CordaRPCClientConfiguration(minimumServerProtocolVersion = 4)
+        val client = CordaRPCClient(NetworkHostAndPort.parse(connection.nodeAddress), cordaConfig)
+        val proxy = client.start(connection.rpcUsername, connection.rpcPassword).proxy
 
-        val client = CordaRPCClient(NetworkHostAndPort.parse(config.nodeAddress))
-        val proxy = client.start(config.rpcUsername, config.rpcPassword).proxy
-
-        val nodes = proxy.networkMapSnapshot()
-        println("nodes are $nodes")
+        val nodes = proxy.networkMapSnapshot().map { it.legalIdentities.first().name }
+        println("nodes are:\n${nodes.joinToString(separator = "\n", transform = { "  $it" })}")
 
         println("Connected, proxy is ${proxy}")
-        val me = proxy.nodeInfo().legalIdentities.first().name
-
         val executors = Executors.newFixedThreadPool(config.threadCount)
 
         val futures = ArrayList<Future<*>>()
 
         for (i in 1..config.threadCount) {
-            futures.add(executors.submit { doLoadTest(i, config, proxy) })
+            futures.add(executors.submit { doLoadTest(i, connection, config, proxy, f) })
             // random delay to avoid flooding server
             Thread.sleep(Random().nextInt(1000).toLong())
         }
 
+        println("waiting for all futues to complete")
+        futures.forEach { it.get() }
+        println("all futures done")
+
         // wait for them all to finish
-        executors.shutdown()
+        val stillRunning = executors.shutdownNow()
+        println("all done, ${stillRunning.size} threads had not finished")
+
     }
 
-    private fun doLoadTest(threadNumber: Int, config: Config, proxy: CordaRPCOps) {
+    private fun viewStatesInVault(connection: Connection, id: UUID) {
+        val cordaConfig = CordaRPCClientConfiguration(minimumServerProtocolVersion = 4)
+        val client = CordaRPCClient(NetworkHostAndPort.parse(connection.nodeAddress), cordaConfig)
+        val proxy = client.start(connection.rpcUsername, connection.rpcPassword).proxy
+
+        val other = proxy.partiesFromName(connection.otherParty, false).single()
+        val handler = proxy.startFlowDynamic(FindFooAcrossNetwork::class.java,
+                UniqueIdentifier(id = id), other)
+
+
+        val result = handler.returnValue.get(30, TimeUnit.SECONDS)
+
+        result.forEach { (k, v) ->
+            println("Data for node $k:")
+            println("In vault")
+            v.inVault.forEach { println("  $it") }
+            println("rawUpdates")
+            v.rawUpdates.forEach { println("  $it") }
+            println("")
+        }
+    }
+
+    private fun doLoadTest(threadNumber: Int, connection: Connection, config: Config, proxy: CordaRPCOps, f : File) {
         println("Thread $threadNumber - Started")
         val partyLookup = HashMap<String, Party>()
         var counter = 0
@@ -79,7 +133,7 @@ private class DataGenerator {
 
             while (counter < config.fooCount) {
 
-                for (party in config.otherParties) {
+                for (party in listOf(connection.otherParty)) {
 
                     if (!partyLookup.containsKey(party)) {
                         partyLookup.put(party, proxy.partiesFromName(party, false).single())
@@ -89,8 +143,16 @@ private class DataGenerator {
 
                     val msg = "Thread $threadNumber - Foo #${++counter} from ${me.organisation} to ${otherParty.nameOrNull().organisation}"
 
-                    val handler = proxy.startFlowDynamic(CreateFooFlow::class.java, msg, otherParty)
-                    val result = handler.returnValue.get(30, TimeUnit.SECONDS)
+                    val id = UniqueIdentifier()
+                    f.appendText("${id.id},Sending\n")
+                    val handler = proxy.startFlowDynamic(CreateFoo::class.java,
+                            id,
+                            msg,
+                            otherParty,
+                            config.action.name)
+
+                    val result = handler.returnValue.get(10, TimeUnit.SECONDS)
+                    f.appendText("${id.id},Sent,${handler.id.uuid},${result.txBits.hash}\n")
                     //println(result)
 
                     if (counter % 10 == 0) {
@@ -105,14 +167,30 @@ private class DataGenerator {
         }
 
     }
+
+
+    private fun isUUID(str: String): Boolean {
+        try {
+            UUID.fromString(str)
+            return true
+        } catch (ex: Exception) {
+            return false
+        }
+
+    }
 }
 
 
 data class Config(
+        val fooCount: Int = 100,
+        val threadCount: Int = 1,
+        val action: Action = Action.Nothing
+)
+
+
+data class Connection(
         val nodeAddress: String,
         val rpcUsername: String,
         val rpcPassword: String,
-        val otherParties: List<String> = listOf("Bob"),
-        val fooCount: Int = 100,
-        val threadCount: Int = 1
+        val otherParty: String = "Bob"
 )

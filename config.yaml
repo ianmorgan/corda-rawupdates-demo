@@ -1,8 +1,10 @@
-nodeAddress: localhost:10049
+#nodeAddress: 3.10.83.5:10003
+
+nodeAddress: localhost:10001
 #nodeAddress: 52.157.177.69:10017
 rpcUsername: testuser
 rpcPassword: password
 otherParties:
   - Bob
 fooCount: 100
-threadCount: 50
+threadCount: 5

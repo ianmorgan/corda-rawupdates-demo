@@ -1,5 +1,10 @@
 apply plugin: 'net.corda.plugins.cordapp'
 
+
+jar {
+    baseName "rawupdatesdemo-contracts"
+}
+
 cordapp {
     targetPlatformVersion corda_platform_version
     minimumPlatformVersion corda_platform_version

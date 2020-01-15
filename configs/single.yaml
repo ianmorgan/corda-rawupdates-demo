@@ -1,0 +1,7 @@
+# An example config that simple creates 100 test Foo states
+# edit as required
+
+
+fooCount: 1
+threadCount: 1
+
