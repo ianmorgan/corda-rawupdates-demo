@@ -35,7 +35,8 @@ class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerial
 
     private fun trackFoos() {
         serviceHub.vaultService.rawUpdates.subscribe {
-            log.info("rawUpdate observer triggered for flow ${it.flowId}")
+            val me = serviceHub.myInfo.legalIdentities.single()
+            log.info("rawUpdate observer triggered for flow ${it.flowId} for $me")
             triggered.appendText("${it.flowId} triggered at ${System.currentTimeMillis()}\n")
 
             it.produced.forEach { produced ->
@@ -52,7 +53,7 @@ class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerial
                             }
                         }
                         Action.PartyAThrowHospitalizeFlowException -> {
-                            if (data.partyA == serviceHub.myInfo.legalIdentities.first()) {
+                            if (data.partyA == me) {
                                 if (!alreadySeen(it.flowId!!)) {
                                     markAsSeen(it.flowId!!)
                                     fooErrors.appendText("${it.flowId},${data.linearId},${System.currentTimeMillis()},ThrowHospitalizeFlowException\n")
@@ -61,7 +62,7 @@ class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerial
                             }
                         }
                         Action.PartyBThrowHospitalizeFlowException -> {
-                            if (data.partyB == serviceHub.myInfo.legalIdentities.first()) {
+                            if (data.partyB == me) {
                                 if (!alreadySeen(it.flowId!!)) {
                                     markAsSeen(it.flowId!!)
                                     fooErrors.appendText("${it.flowId},${data.linearId},${System.currentTimeMillis()},ThrowHospitalizeFlowException\n")
@@ -75,7 +76,6 @@ class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerial
             }
         }
     }
-
 
     private fun alreadySeen(flowId: UUID): Boolean {
         return alreadySeen.contains(flowId)
@@ -92,7 +92,6 @@ class FooTrackerService(private val serviceHub: AppServiceHub) : SingletonSerial
             log.info("Loaded ${alreadySeen.size} from ${seen.name}")
         }
     }
-
 
     private fun fooToCSV(foo: FooState): String {
         val sb = StringBuilder()

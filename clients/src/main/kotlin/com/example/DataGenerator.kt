@@ -92,7 +92,7 @@ private class DataGenerator {
             Thread.sleep(Random().nextInt(1000).toLong())
         }
 
-        println("waiting for all futues to complete")
+        println("waiting for all futures to complete")
         futures.forEach { it.get() }
         println("all futures done")
 

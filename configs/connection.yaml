@@ -1,4 +1,4 @@
-nodeAddress: localhost:10001
+nodeAddress: localhost:10061
 rpcUsername: testuser
 rpcPassword: password
 otherParty:  Bob

@@ -5,23 +5,38 @@
 # CorDapp Raw Updates demo 
 
 A simple Cordapp to experiment with keeping an external query database in sync using the rawUpdates
-API. 
+API. In this pattern, which favours close integration, we accept that if the external system
+is unavailable it is better to fail the flow (and force it into the hospital), rather than have a 
+second database that is out of sync. Obviously in a distributed system like Corda, 
+there are now multiple possible failure and recover modes when updating the external database, 
+for example:
+* the initiating node fails intermittently 
+* a participant node fails intermittently
+* multiple nodes fail intermittently within the same flow
+* a node fails continuously 
 
-There is one state, FooState and a simple flow that issues new states to two parties, 
-partyA and partyB. By changing the action attribute in the FooState, different types of error 
+This little CordApp lets us test the failure and recovery modes behave as expected. It is not 
+an exhaustive set of scenarios, so please consider the more complicated flows and states that will 
+exist in your real world application and add additional logic as necessary .
+
+
+There is one state, `FooState` and a simple flow, `CreateFoo` that issues new states to two parties, 
+partyA and partyB, running the standard finality flow. By changing the action attribute in the FooState, different types of error 
 condition in the rawUpdates observer can be emulated. 
+
+Each node starts a simple service, `FooTrackerService` that runs the rawUpdates observer
 
 Each node keeps track of what it has seen and done in a number of text files, 
 
 * **triggered.txt** - records every call to the observer 
 * **foo-data.txt** - stores the update that would be stored in the external system, i.e. the successful updates 
-* **foo-data.txt** - stores the update that would have failed in the external system and have throw an exception
+* **foo-errors.txt** - stores the update that would have failed in the external system and have throw an exception
 * **seen.txt** - internal state for the observer, just to stop it triggering exceptions repeatedly
 
 The helper flows `FindFoo` and `FindFooAcrossNetwork` make it easier to check the state is 
 as expected. 
 
-And finally, there is a simple command line app, which is normally the easiest way to run.  
+Finally there is a simple command line app, which is normally the easiest way to run.  
 
 ## Pre-Requisites
 
@@ -54,9 +69,10 @@ d9fee9cb-c987-49be-aceb-998d28e845e3,Sent,bb112660-23f1-4b6b-a2d4-8bc9eb0ed786,3
 83a0aa11-3c79-49be-a2ae-fde9c32a4255,Sent,648d08c8-d686-47a8-8d15-32ac2003f7bd,CD3098948ED067EE405D18C454C4C7368B7742DC878A144CD99D57B38AB7B147
 ``` 
 
-This will the `CreateFooFlow`. Each time this runs on both nodes the `FooTrackerService`
-is running  and will record the data it has received to the csv file `foo-data.txt` 
-in the nodes root folder. A simple example looks like 
+This calls the `CreateFooFlow`, which simply issues a new FooState to both parties and runs 
+the normal Finality Flow. On both nodes the `FooTrackerService`
+is stated automatically and will record the data it has received via a rawUdates observer to the 
+csv file `foo-data.txt` in the nodes root folder. A simple example looks like:
 
 ```bash
 $ cat foodata.txt 
@@ -94,10 +110,7 @@ In vault
   FooState(linearId=0c80749e-a7e9-4a54-83fc-a8d33e6205ca, data=Thread 5 - Foo #1 from Alice to Bob, partyA=O=Alice, L=New York, C=US, partyB=O=Bob, L=Paris, C=FR, action=Nothing)
 rawUpdates
   FooState(linearId=0c80749e-a7e9-4a54-83fc-a8d33e6205ca, data=Thread 5 - Foo #1 from Alice to Bob, partyA=O=Alice, L=New York, C=US, partyB=O=Bob, L=Paris, C=FR, action=Nothing)
-
 ```
-
-
 
 
 
