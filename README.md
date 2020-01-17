@@ -2,10 +2,10 @@
   <img src="https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png" alt="Corda" width="500">
 </p>
 
-# CorDapp Raw Updates demo 
+# RawUpdates Demo App 
 
-A simple Cordapp to experiment with keeping an external query database in sync using the rawUpdates
-API. In this pattern, which favours close integration, we accept that if the external system
+This is a simple Cordapp to test keeping an external query database in sync with Corda using 
+the rawUpdates API. In this pattern, which favours close integration, we accept that if the external system
 is unavailable it is better to fail the flow (and force it into the hospital), rather than have a 
 second database that is out of sync. Obviously in a distributed system like Corda, 
 there are now multiple possible failure and recover modes when updating the external database, 
@@ -13,12 +13,13 @@ for example:
 * the initiating node fails intermittently 
 * a participant node fails intermittently
 * multiple nodes fail intermittently within the same flow
-* a node fails continuously 
+* a node fails continuously.
 
-This little CordApp lets us test the failure and recovery modes behave as expected. It is not 
+
+This little CordApp lets us test the failure and recovery modes behave as expected, and also emulate 
+the load of multiple client to test for possible race conditions. It is not 
 an exhaustive set of scenarios, so please consider the more complicated flows and states that will 
-exist in your real world application and add additional logic as necessary .
-
+exist in your real world application and add additional logic as necessary.
 
 There is one state, `FooState` and a simple flow, `CreateFoo` that issues new states to two parties, 
 partyA and partyB, running the standard finality flow. By changing the action attribute in the FooState, different types of error 
@@ -69,9 +70,9 @@ d9fee9cb-c987-49be-aceb-998d28e845e3,Sent,bb112660-23f1-4b6b-a2d4-8bc9eb0ed786,3
 83a0aa11-3c79-49be-a2ae-fde9c32a4255,Sent,648d08c8-d686-47a8-8d15-32ac2003f7bd,CD3098948ED067EE405D18C454C4C7368B7742DC878A144CD99D57B38AB7B147
 ``` 
 
-This calls the `CreateFooFlow`, which simply issues a new FooState to both parties and runs 
+This calls the `CreateFoo` flow, which simply issues a new FooState to both parties and runs 
 the normal Finality Flow. On both nodes the `FooTrackerService`
-is stated automatically and will record the data it has received via a rawUdates observer to the 
+is stated automatically and will record the data it has received via a rawUpdates observer to the 
 csv file `foo-data.txt` in the nodes root folder. A simple example looks like:
 
 ```bash
