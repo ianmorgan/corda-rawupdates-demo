@@ -23,8 +23,8 @@ There are four important points to understand:
 1. The `rawUpdates` observer is triggered in the Finality flow **AFTER** the 
 transaction has been notarised, so although the new states will not appear in the Corda ledger or the external 
 database, they have been notarised and cannot be used in another transaction.  
-2. In the current implementation, there is no 2-phase style commit at this point. So if only `Charlie` 
-fails, but `Alice` and `Bob` succeed, it is possible that `Alice` and `Bob` see the new states, but `Charlie` doesn't. 
+2. In the current implementation of Corda there is no 2-phase style commit at this point. So if only `Charlie` 
+fails, but `Alice` and `Bob` succeed, it is possible that `Alice` and `Bob` now see the new states, but `Charlie` doesn't. 
 The exact behaviour will depend upon the internal implementation and may therefore change between Corda releases.
 3. As the states have now been spent, the flow **has to get out of the hospital**. If not, there will be unusable 
 states on the ledger. 
@@ -40,7 +40,7 @@ tested, for example:
 
 
 This app lets us test these modes behave as expected, and also emulate 
-the load of multiple client to test for possible race conditions. It is not 
+the load of multiple clients, to test for possible race conditions. It is not 
 an exhaustive set of scenarios, so please consider the more complicated flows and states that will 
 exist in your real world application and add additional logic as necessary.
 
@@ -118,7 +118,7 @@ where:
 * columm5 - partyB
 * column6 - unix timestamp 
 
-Running the command line with a linearId will dump out details for that state across the both nodes
+Running the command line with a linearId will dump out details for that state across the both nodes.
 
 ```bash
 $ java -jar clients/build/libs/clients-0.1.jar 0c80749e-a7e9-4a54-83fc-a8d33e6205ca

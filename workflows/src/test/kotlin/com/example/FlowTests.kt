@@ -1,7 +1,9 @@
 package com.example
 
-import com.example.flows.CreateFooFlow
+import com.example.flows.CreateFoo
+import com.example.states.Action
 import com.example.states.FooState
+import net.corda.core.contracts.UniqueIdentifier
 import net.corda.core.utilities.getOrThrow
 import net.corda.testing.common.internal.testNetworkParameters
 import net.corda.testing.node.MockNetwork
@@ -10,6 +12,7 @@ import net.corda.testing.node.TestCordapp
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.util.*
 import kotlin.test.assertEquals
 
 class FlowTests {
@@ -27,7 +30,7 @@ class FlowTests {
 
     init {
         listOf(a, b).forEach {
-       //     it.registerInitiatedFlow(Responder::class.java)
+            //     it.registerInitiatedFlow(Responder::class.java)
         }
     }
 
@@ -40,7 +43,7 @@ class FlowTests {
     @Test
     fun `create a FooState`() {
         // create flow
-        val createFlow = CreateFooFlow("some data", partyB)
+        val createFlow = CreateFoo(UniqueIdentifier(), "some data", partyB, Action.Nothing.toString())
 
         // run the flow
         val future = a.startFlow(createFlow).toCompletableFuture()
