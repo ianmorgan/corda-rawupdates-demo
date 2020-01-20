@@ -21,8 +21,10 @@ rather than have a second database that is out of sync.
 There are four important points to understand:
 
 1. The `rawUpdates` observer is triggered in the Finality flow **AFTER** the 
-transaction has been notarised, so although the new states will not appear in the Corda ledger or the external 
-database, they have been notarised and cannot be used in another transaction.  
+transaction has been notarised, so if in the event of an error the new states don't appear in the Corda ledger 
+or the external database, they have still been notarised and cannot be used in another transaction. Corda will handle 
+these situations via the `Flow Hospital`, but as noted in point 4 this is currently implemented on the assumption that 
+problems writing to the database are very rare.     
 2. In the current implementation of Corda there is no 2-phase style commit at this point. So if only `Charlie` 
 fails, but `Alice` and `Bob` succeed, it is possible that `Alice` and `Bob` now see the new states, but `Charlie` doesn't. 
 The exact behaviour will depend upon the internal implementation and may therefore change between Corda releases.
