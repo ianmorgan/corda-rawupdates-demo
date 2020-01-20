@@ -2,32 +2,57 @@
   <img src="https://www.corda.net/wp-content/uploads/2016/11/fg005_corda_b.png" alt="Corda" width="500">
 </p>
 
-# RawUpdates Demo App 
+# RawUpdates Demo CordApp 
 
-This is a simple Cordapp to test keeping an external query database in sync with Corda using 
-the rawUpdates API. In this pattern, which favours close integration, we accept that if the external system
-is unavailable it is better to fail the flow (and force it into the hospital), rather than have a 
-second database that is out of sync. Obviously in a distributed system like Corda, 
-there are now multiple possible failure and recover modes when updating the external database, 
-for example:
+This is a simple CordApp to demonstrate patterns for keeping an external database in sync with Corda using 
+the [rawUpdates](https://docs.corda.net/api/javadoc/net/corda/core/node/services/VaultService.html#getRawUpdates--) API. 
+
+## About rawUpdates
+
+As the documentation for rawUpdates points out, use this API with great care. If the observer does 
+unexpected things during the rawUpdate, then the ledger can be left in an inconsistent 
+state.
+
+In this example we make use of the new `HospitalizeFlowException` to let the external system signal to Corda
+that the update failed, and this will push the flow into the hospital. So this pattern favours close integration, 
+we accept that if the external system is unavailable it is better to fail the flow (and force it into the hospital), 
+rather than have a second database that is out of sync. 
+
+There are four important points to understand:
+
+1. The `rawUpdates` observer is triggered in the Finality flow **AFTER** the 
+transaction has been notarised, so although the new states will not appear in the Corda ledger or the external 
+database, they have been notarised and cannot be used in another transaction.  
+2. In the current implementation, there is no 2-phase style commit at this point. So if only `Charlie` 
+fails, but `Alice` and `Bob` succeed, it is possible that `Alice` and `Bob` see the new states, but `Charlie` doesn't. 
+The exact behaviour will depend upon the internal implementation and may therefore change between Corda releases.
+3. As the states have now been spent, the flow **has to get out of the hospital**. If not, there will be unusable 
+states on the ledger. 
+4. The current flow hospital has a poor bedside manner. It will only look at it's patients on node restart 
+and only has one treatment plan. Future versions of Corda will have a better hospital.
+
+Obviously there are now multiple possible failure and recovery modes that need to be understood and 
+tested, for example:
 * the initiating node fails intermittently 
 * a participant node fails intermittently
 * multiple nodes fail intermittently within the same flow
-* a node fails continuously.
+* a node fails continuously, i.e. goes back into the hospital 
 
 
-This little CordApp lets us test the failure and recovery modes behave as expected, and also emulate 
+This app lets us test these modes behave as expected, and also emulate 
 the load of multiple client to test for possible race conditions. It is not 
 an exhaustive set of scenarios, so please consider the more complicated flows and states that will 
 exist in your real world application and add additional logic as necessary.
 
+## Using this CordApp
+
 There is one state, `FooState` and a simple flow, `CreateFoo` that issues new states to two parties, 
 partyA and partyB, running the standard finality flow. By changing the action attribute in the FooState, different types of error 
-condition in the rawUpdates observer can be emulated. 
+condition in the `rawUpdates` observer can be emulated. 
 
 Each node starts a simple service, `FooTrackerService` that runs the rawUpdates observer
 
-Each node keeps track of what it has seen and done in a number of text files, 
+Each node keeps track of what it has seen and done in a number of text files:
 
 * **triggered.txt** - records every call to the observer 
 * **foo-data.txt** - stores the update that would be stored in the external system, i.e. the successful updates 
