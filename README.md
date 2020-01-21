@@ -142,6 +142,16 @@ rawUpdates
   FooState(linearId=0c80749e-a7e9-4a54-83fc-a8d33e6205ca, data=Thread 5 - Foo #1 from Alice to Bob, partyA=O=Alice, L=New York, C=US, partyB=O=Bob, L=Paris, C=FR, action=Nothing)
 ```
 
+100
+![docs/images/RawUpdates.png](g | width=100)
+
+400
+![docs/images/RawUpdates.png](g | width=400)
+
+800
+![docs/images/RawUpdates.png](g | width=800)
+
+
 
 
 https://www.lucidchart.com/invitations/accept/bae1ecdc-0849-4c5d-871f-5a6774ddba46
