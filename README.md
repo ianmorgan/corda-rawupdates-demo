@@ -33,6 +33,8 @@ states on the ledger.
 4. The current flow hospital has a poor bedside manner. It will only look at it's patients on node restart 
 and only has one treatment plan. Future versions of Corda will have a better hospital.
 
+
+
 Obviously there are now multiple possible failure and recovery modes that need to be understood and 
 tested, for example:
 * the initiating node fails intermittently 
@@ -142,5 +144,5 @@ rawUpdates
 
 
 
-
+https://www.lucidchart.com/invitations/accept/bae1ecdc-0849-4c5d-871f-5a6774ddba46
 
