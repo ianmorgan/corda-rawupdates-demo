@@ -33,6 +33,8 @@ private class Client {
         logger.info("{}", nodes)
 
 
+
+
 //        proxy.stateMachinesSnapshot().forEach {
 //            println(it)
 //        }

@@ -18,7 +18,7 @@ that the update failed, and this will push the flow into the hospital. So this p
 we accept that if the external system is unavailable it is better to fail the flow (and force it into the hospital), 
 rather than have a second database that is out of sync. 
 
-There are several important points to understand, as well as those documented with the API
+There are some important points to understand, as well as those documented with the API:
 
 1. The `rawUpdates` observer is triggered in the Finality flow **AFTER** the 
 transaction has been notarised, so if in the event of an error the new states don't appear in the Corda ledger 
@@ -27,22 +27,23 @@ these situations via the `Flow Hospital`, but as noted in point 4 this is curren
 problems writing to the database are very rare.     
 2. In the current implementation of Corda there is no 2-phase style commit at this point. So if only `Charlie` 
 fails, but `Alice` and `Bob` succeed, it is possible that `Alice` and `Bob` now see the new states, but `Charlie` doesn't. 
-The exact behaviour will depend upon the internal implementation and may therefore change between Corda releases.
+(until the flow comes out the hostpital). The exact behaviour will depend upon the internal implementation 
+and may therefore change between Corda releases.
 3. As the states have now been spent, the flow **has to get out of the hospital**. If not, there will be unusable 
 states on the ledger. 
-4. The current flow hospital has a poor bedside manner. It will only look at it's patients on node restart 
+4. The current flow hospital has what could be described as a poor bedside manner. It will only look at it's patients on node restart 
 and only has one treatment plan. Future versions of Corda will have a better hospital.
 5. The code in the rawUpdates handler must run quickly and be able to keep up with speed of writes to the Corda node, 
 otherwise the node will start to buffer in the RxObservable layer, eventually exhausting buffer space and 
 failing rawUpdates.
-6. Thread pools may need to be increased simply to take account of the additional delay (in the external update)
-before the tread is released back to pool. Likewise the database transaction window has been increased (the final commit 
+6. Corda thread pools (flow workers) may need to be increased simply to take account of the additional delay (in the external update)
+before the tread is released back to the pool. Likewise the database transaction window has now been increased (the final commit 
 is now delayed until the rawUpdate has completed), which may have implications on the performance of the database. For 
 example connection pool sizes and the chance of deadlocks.
 7. A Corda node running multiple concurrent transactions. i.e. multiple flow workers, has no central ordering across 
 the all the chains being written to the database. The final data order is driven simply by the order in 
 which threads actually write to the database. As rawUpdates will never trigger at exactly the same time window within 
-this update, they will likely end up a slightly different order. Please note, the order within a single chain 
+each update, they will likely end up a slightly different order. Please note, the order within a single chain 
 is ALWAYS correct and consistent, this concerns simply the order across chains.
 
 Obviously there are now multiple possible failure and recovery modes that need to be understood and 
@@ -61,11 +62,11 @@ exist in your real world application and add additional logic as necessary.
 
 The diagram below summaries the key steps in a typical Corda flow. Some key points are
 
-* once the initiating node has written to the Notary (step 1 in the Finalize stage) the transaction in on 
+* once the initiating node has written to the Notary (step 1 in the Finalize stage) the transaction is on 
 the ledger, it cannot be rolled back.
 * once finalized, the initiating node now communicates to each of the other parties to commit it their 
 vault as finalised, so there is always a window where some nodes see the latest update and others don't.
-* If a node uses a spent state simply because it hasn't yet got the latest  update, then it will be detected by Corda, 
+* If a node uses a spent state simply because it hasn't yet got the latest update, then it will be detected by Corda, 
 either by another participant that does have the correct state and therefore refuses to sign, or the Notary.  
 
 <img src="docs/images/RawUpdates.png" alt="alt text" width="800px" >

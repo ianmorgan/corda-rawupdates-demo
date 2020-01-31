@@ -99,7 +99,6 @@ private class DataGenerator {
         // wait for them all to finish
         val stillRunning = executors.shutdownNow()
         println("all done, ${stillRunning.size} threads had not finished")
-
     }
 
     private fun viewStatesInVault(connection: Connection, id: UUID) {
