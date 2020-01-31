@@ -18,7 +18,7 @@ that the update failed, and this will push the flow into the hospital. So this p
 we accept that if the external system is unavailable it is better to fail the flow (and force it into the hospital), 
 rather than have a second database that is out of sync. 
 
-There are four important points to understand:
+There are several important points to understand, as well as those documented with the API
 
 1. The `rawUpdates` observer is triggered in the Finality flow **AFTER** the 
 transaction has been notarised, so if in the event of an error the new states don't appear in the Corda ledger 
@@ -32,8 +32,18 @@ The exact behaviour will depend upon the internal implementation and may therefo
 states on the ledger. 
 4. The current flow hospital has a poor bedside manner. It will only look at it's patients on node restart 
 and only has one treatment plan. Future versions of Corda will have a better hospital.
-
-
+5. The code in the rawUpdates handler must run quickly and be able to keep up with speed of writes to the Corda node, 
+otherwise the node will start to buffer in the RxObservable layer, eventually exhausting buffer space and 
+failing rawUpdates.
+6. Thread pools may need to be increased simply to take account of the additional delay (in the external update)
+before the tread is released back to pool. Likewise the database transaction window has been increased (the final commit 
+is now delayed until the rawUpdate has completed), which may have implications on the performance of the database. For 
+example connection pool sizes and the chance of deadlocks.
+7. A Corda node running multiple concurrent transactions. i.e. multiple flow workers, has no central ordering across 
+the all the chains being written to the database. The final data order is driven simply by the order in 
+which threads actually write to the database. As rawUpdates will never trigger at exactly the same time window within 
+this update, they will likely end up a slightly different order. Please note, the order within a single chain 
+is ALWAYS correct and consistent, this concerns simply the order across chains.
 
 Obviously there are now multiple possible failure and recovery modes that need to be understood and 
 tested, for example:
@@ -42,11 +52,25 @@ tested, for example:
 * multiple nodes fail intermittently within the same flow
 * a node fails continuously, i.e. goes back into the hospital 
 
-
 This app lets us test these modes behave as expected, and also emulate 
 the load of multiple clients, to test for possible race conditions. It is not 
 an exhaustive set of scenarios, so please consider the more complicated flows and states that will 
 exist in your real world application and add additional logic as necessary.
+
+## The Finality Flow in more detail 
+
+The diagram below summaries the key steps in a typical Corda flow. Some key points are
+
+* once the initiating node has written to the Notary (step 1 in the Finalize stage) the transaction in on 
+the ledger, it cannot be rolled back.
+* once finalized, the initiating node now communicates to each of the other parties to commit it their 
+vault as finalised, so there is always a window where some nodes see the latest update and others don't.
+* If a node uses a spent state simply because it hasn't yet got the latest  update, then it will be detected by Corda, 
+either by another participant that does have the correct state and therefore refuses to sign, or the Notary.  
+
+<img src="docs/images/RawUpdates.png" alt="alt text" width="800px" >
+
+*https://www.lucidchart.com/invitations/accept/bae1ecdc-0849-4c5d-871f-5a6774ddba46*
 
 ## Using this CordApp
 
@@ -141,22 +165,3 @@ In vault
 rawUpdates
   FooState(linearId=0c80749e-a7e9-4a54-83fc-a8d33e6205ca, data=Thread 5 - Foo #1 from Alice to Bob, partyA=O=Alice, L=New York, C=US, partyB=O=Bob, L=Paris, C=FR, action=Nothing)
 ```
-
-100
-![docs/images/RawUpdates.png](g | width=100)
-
-400
-![docs/images/RawUpdates.png](g | width=400)
-
-800
-![docs/images/RawUpdates.png](g | width=800)
-
-<img src="docs/images/RawUpdates.png" alt="alt text" width="800px" >
-
-
-
-
-
-
-https://www.lucidchart.com/invitations/accept/bae1ecdc-0849-4c5d-871f-5a6774ddba46
-
