@@ -31,8 +31,10 @@ fails, but `Alice` and `Bob` succeed, it is possible that `Alice` and `Bob` now 
 and may therefore change between Corda releases.
 3. As the states have now been spent, the flow **has to get out of the hospital**. If not, there will be unusable 
 states on the ledger. 
-4. The current flow hospital has what could be described as a poor bedside manner. It will only look at it's patients on node restart 
-and only has one treatment plan. Future versions of Corda will have a better hospital.
+4. The current flow hospital has what could be described as a poor bedside manner. It will only look at it's patients on 
+node restart and only has one treatment plan. Future versions of Corda will have a better hospital, but until that 
+happens it is really important to minimize the chances of flows ending up in the hospital. The handler should ideally 
+deal with transient errors, in a similar style to Corda - see https://docs.corda.net/node-flow-hospital.html  
 5. The code in the rawUpdates handler must run quickly and be able to keep up with speed of writes to the Corda node, 
 otherwise the node will start to buffer in the RxObservable layer, eventually exhausting buffer space and 
 failing rawUpdates.
@@ -40,10 +42,13 @@ failing rawUpdates.
 before the tread is released back to the pool. Likewise the database transaction window has now been increased (the final commit 
 is now delayed until the rawUpdate has completed), which may have implications on the performance of the database. For 
 example connection pool sizes and the chance of deadlocks.
-7. A Corda node running multiple concurrent transactions. i.e. multiple flow workers, has no central ordering across 
-the all the chains being written to the database. The final data order is driven simply by the order in 
-which threads actually write to the database. As rawUpdates will never trigger at exactly the same time window within 
-each update, they will likely end up a slightly different order. Please note, the order within a single chain 
+
+Also, beware that the final order of writes may differ slightly. A Corda node running multiple concurrent 
+transactions, i.e. multiple flow workers, has no central ordering across the all the chains being written to the 
+database. The final data order is driven simply by the order in which threads actually write to the database. 
+As rawUpdates will never trigger at exactly the same time window within each update, they will likely end up a 
+slightly different order. In most use cases this is not an issue, any application 
+that cares about ordering should add its own sorting logic. Please note, the order within a single chain 
 is ALWAYS correct and consistent, this concerns simply the order across chains.
 
 Obviously there are now multiple possible failure and recovery modes that need to be understood and 
