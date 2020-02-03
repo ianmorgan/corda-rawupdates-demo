@@ -21,30 +21,29 @@ rather than have a second database that is out of sync.
 There are some important points to understand, as well as those documented with the API:
 
 1. The `rawUpdates` observer is triggered in the Finality flow **AFTER** the 
-transaction has been notarised, so if in the event of an error the new states don't appear in the Corda ledger 
+transaction has been notarised, so in the event of an error the new states don't appear in the Corda ledger 
 or the external database, they have still been notarised and cannot be used in another transaction. Corda will handle 
-these situations via the `Flow Hospital`, but as noted in point 4 this is currently implemented on the assumption that 
-problems writing to the database are very rare.     
+these situations via the `Flow Hospital`, but as noted in point 3 this is currently implemented on the assumption that 
+problems writing to the database are very rare. As the states have now been spent, 
+the flow **has to get out of the hospital**. If not, there will be unusable states on the ledger.     
 2. In the current implementation of Corda there is no 2-phase style commit at this point. So if only `Charlie` 
 fails, but `Alice` and `Bob` succeed, it is possible that `Alice` and `Bob` now see the new states, but `Charlie` doesn't. 
-(until the flow comes out the hostpital). The exact behaviour will depend upon the internal implementation 
+(until the flow comes out the hospital). The exact behaviour will depend upon the internal implementation 
 and may therefore change between Corda releases.
-3. As the states have now been spent, the flow **has to get out of the hospital**. If not, there will be unusable 
-states on the ledger. 
-4. The current flow hospital has what could be described as a poor bedside manner. It will only look at it's patients on 
+3. The current flow hospital has what could be described as a poor bedside manner. It will only look at it's patients on 
 node restart and only has one treatment plan. Future versions of Corda will have a better hospital, but until that 
-happens it is really important to minimize the chances of flows ending up in the hospital. The handler should ideally 
+time it is really important to minimize the chances of flows ending up in the hospital. The handler should ideally 
 deal with transient errors, in a similar style to Corda - see https://docs.corda.net/node-flow-hospital.html  
-5. The code in the rawUpdates handler must run quickly and be able to keep up with speed of writes to the Corda node, 
+4. The code in the rawUpdates handler must run quickly and be able to keep up with speed of writes to the Corda node, 
 otherwise the node will start to buffer in the RxObservable layer, eventually exhausting buffer space and 
 failing rawUpdates.
-6. Corda thread pools (flow workers) may need to be increased simply to take account of the additional delay (in the external update)
+5. Corda thread pools (flow workers) may need to be increased simply to take account of the additional delay (in the external update)
 before the tread is released back to the pool. Likewise the database transaction window has now been increased (the final commit 
 is now delayed until the rawUpdate has completed), which may have implications on the performance of the database. For 
 example connection pool sizes and the chance of deadlocks.
 
 Also, beware that the final order of writes may differ slightly. A Corda node running multiple concurrent 
-transactions, i.e. multiple flow workers, has no central ordering across the all the chains being written to the 
+transactions, i.e. multiple flow workers, has no central ordering across all the chains being written to the 
 database. The final data order is driven simply by the order in which threads actually write to the database. 
 As rawUpdates will never trigger at exactly the same time window within each update, they will likely end up a 
 slightly different order. In most use cases this is not an issue, any application 
